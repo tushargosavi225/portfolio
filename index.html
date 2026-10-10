@@ -186,18 +186,19 @@
   .card .meta{flex:none;text-align:right}
   .card .year{font-size:var(--t-eyebrow);text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
   .card .outcome{margin-top:.5rem;max-width:16rem;font-size:var(--t-eyebrow);font-weight:500;text-transform:uppercase;letter-spacing:.18em;color:var(--accent);line-height:1.4}
-  .card .cat{margin-top:.75rem;font-size:var(--t-eyebrow);text-transform:uppercase;letter-spacing:.22em;color:var(--muted)}
+  .card .cat{margin-top:1.25rem;font-size:var(--t-eyebrow);text-transform:uppercase;letter-spacing:.22em;color:var(--muted)}
   @media (max-width:639px){.card-row{flex-direction:column;gap:1rem}.card .meta{text-align:left}}
 
 
   /* ---------- Experience details ---------- */
-  .duties{margin-top:1.5rem;display:grid;gap:.7rem;font-size:.975rem;line-height:1.55;color:color-mix(in srgb,var(--foreground) 72%,var(--muted))}
-  .duties li{position:relative;padding-left:1.35rem;max-width:56ch}
+  .duties{margin-top:1.5rem;max-width:40rem;display:grid;gap:.7rem;font-size:.975rem;line-height:1.55;color:color-mix(in srgb,var(--foreground) 72%,var(--muted))}
+  .duties li{position:relative;padding-left:1.35rem}
   .duties li::before{content:"";position:absolute;left:0;top:.72em;width:.55rem;height:1px;background:var(--accent)}
   .duty-group{margin-top:1.75rem}
   .duty-group h4{font-size:.95rem;font-weight:600;color:var(--foreground);letter-spacing:-.005em}
   .duty-group .duties{margin-top:.85rem}
-  .steps{margin-top:1.5rem;border-left:1px solid var(--line-strong)}
+  .steps{margin-top:1.5rem;max-width:40rem;border-left:1px solid var(--line-strong)}
+  .steps .duties{max-width:none}
   .step{position:relative;padding:0 0 1.75rem 1.5rem}
   .step:last-child{padding-bottom:0}
   .step::before{content:"";position:absolute;left:-.3rem;top:.4rem;width:.55rem;height:.55rem;border-radius:9999px;background:var(--background);border:1px solid var(--accent)}
@@ -207,6 +208,20 @@
   .step-head span{font-size:var(--t-eyebrow);color:var(--muted);font-variant-numeric:tabular-nums}
   .step .duties{margin-top:.85rem}
 
+
+  .card.is-collapsed .duties li:nth-child(n+4){display:none}
+  .card.is-collapsed .step .duties li:nth-child(n+3){display:none}
+  .more-btn{display:inline-flex;align-items:center;gap:.55rem;margin-top:1.25rem;padding:.55rem 1rem;border:1px solid var(--line-strong);border-radius:9999px;font-size:.9rem;font-weight:500;color:var(--foreground);transition:border-color .25s ease,color .25s ease}
+  .more-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .more-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .more-btn svg{width:.9rem;height:.9rem;transition:transform .3s var(--ease-expo)}
+  .more-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+  /* Nav gets a backdrop once the page scrolls, so it never sits on top of text */
+  .site-nav{transition:background-color .3s ease,border-color .3s ease;border-bottom:1px solid transparent}
+  .site-nav.is-scrolled{background:color-mix(in srgb,var(--background) 86%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom-color:var(--line)}
+  .site-nav.is-scrolled nav{padding-top:1rem;padding-bottom:1rem}
+  .site-nav nav{transition:padding .3s ease}
+  @media (prefers-reduced-motion:reduce){.site-nav,.site-nav nav,.more-btn svg{transition:none}}
 
   /* ---------- KaryaSetu ---------- */
   .ks-intro{margin-top:2rem;max-width:58ch;font-size:var(--t-lead);line-height:1.5;color:color-mix(in srgb,var(--foreground) 80%,var(--muted))}
@@ -842,6 +857,50 @@
         }).catch(function () {});
       });
     });
+  })();
+</script>
+<script>
+  // Experience: show the first few points per role, with a toggle for the rest.
+  (function () {
+    var icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    document.querySelectorAll("#experience .card").forEach(function (card, i) {
+      var items = card.querySelectorAll(".duties li");
+      var hidden = card.querySelector(".steps")
+        ? Array.prototype.filter.call(card.querySelectorAll(".step .duties"), function () { return true; })
+            .reduce(function (n, ul) { return n + Math.max(0, ul.children.length - 2); }, 0)
+        : Math.max(0, items.length - 3);
+      if (!hidden) return;
+      var cat = card.querySelector(".cat");
+      var id = "exp-details-" + i;
+      (card.querySelector(".steps") || card.querySelector(".duties")).id = id;
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "more-btn";
+      btn.setAttribute("aria-controls", id);
+      function render(open) {
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+        btn.innerHTML = (open ? "Show less" : "Show " + hidden + " more") + icon;
+        card.classList.toggle("is-collapsed", !open);
+      }
+      btn.addEventListener("click", function () {
+        var open = btn.getAttribute("aria-expanded") !== "true";
+        render(open);
+        if (!open) {
+          var top = card.getBoundingClientRect().top;
+          if (top < 0) {
+            if (window.lenis) window.lenis.scrollTo(card, { offset: -90, immediate: true });
+            else card.scrollIntoView({ block: "start" });
+          }
+        }
+        if (window.lenis && window.lenis.resize) window.lenis.resize();
+        window.dispatchEvent(new Event("resize"));
+      });
+      render(false);
+      cat.parentNode.insertBefore(btn, cat);
+    });
+    // Nav backdrop after scrolling
+    var nav = document.querySelector(".site-nav");
+    function onScroll() { nav.classList.toggle("is-scrolled", window.scrollY > 40); }
+    window.addEventListener("scroll", onScroll, { passive: true }); onScroll();
   })();
 </script>
 </body>
